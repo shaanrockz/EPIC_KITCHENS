@@ -1,6 +1,6 @@
 train:
   manualSeed: 786 # set manual seed
-  epoch: 80 # Number of epochs
+  epoch: 40 # Number of epochs
   anno_path: /media/data/salam/epic-kitchens/annotations/EPIC_train_action_labels.csv # Annotation Path
   data_path: /media/data/salam/epic-kitchens/EPIC_KITCHENS_2018/frames_rgb_flow/rgb/train/ # Data Path
   val_seen_vids: [

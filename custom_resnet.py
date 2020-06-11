@@ -109,7 +109,7 @@ class EPICModel(nn.Module):
 
         return {"out_shared": x, "out_verb": verb_logits_consensus, "out_noun": noun_logits_consensus}
 
-    def train(self, mode):
+    def train(self, mode=None):
         """
         Override the default train() to freeze the BN parameters
         :return:

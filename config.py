@@ -47,10 +47,10 @@ class config:
                 self.num_worker_train = 1
                 self.num_worker_val = 4
             elif self.algo == "ERM":
-                self.train_batch_size = 16*2
-                self.val_batch_size = 8*2
-                self.num_worker_train = 16
-                self.num_worker_val = 8
+                self.train_batch_size = 16
+                self.val_batch_size = 8
+                self.num_worker_train = 8
+                self.num_worker_val = 4
             elif self.algo == "MTGA":
                 self.train_batch_size = 16*2
                 self.val_batch_size = 8*2
