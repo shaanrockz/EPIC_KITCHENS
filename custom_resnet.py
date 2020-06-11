@@ -230,10 +230,3 @@ def resnet50_without_fc(pretrained=True, progress=True, **kwargs):
     # return my_resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress, **kwargs)
 
 
-if __name__ == "__main__":
-    model = EPICModel(config())
-
-    x = torch.randn((2, 8 * 3, 224, 224))
-    y = model(x)
-    print(model)
-    print(y['out_verb'])

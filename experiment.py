@@ -50,24 +50,6 @@ class Experiment:
         if self.cfg.algo == "MTGA":
             self.minNormSolver = MinNormSolver()
 
-        if not self.debugging and self.data_train:
-            # If training is fresh start, create a new summary writer
-            if not self.load_model and not self.cfg.feature_extraction:
-                self.summary_filename = str(
-                    "Event_TSN_Resnet_RGB_("
-                    + self.cfg.additional_info
-                    + ")_train_mode= "
-                    + str(self.cfg.train_mode)
-                    + "_Time = "
-                    + str(datetime.now().strftime("%I:%M%p on %B %d"))
-                )
-                # Writer will output to ./runs/ directory by default
-                self.writer = SummaryWriter(
-                    log_dir="runs/" + self.summary_filename,
-                    flush_secs=30,
-                    filename_suffix=self.summary_filename,
-                )
-
     def adjust_learning_rate(self, optimizer, epoch, lr_steps):
         """Sets the learning rate to the initial LR decayed by 10 every 20 epochs"""
         decay = 0.1 ** (sum(epoch >= np.array(lr_steps)))
@@ -296,7 +278,6 @@ class Experiment:
         tmp_noun_query = tmp_noun[p:]
         #output_noun = self.euclidean_metric(tmp_noun_query, tmp_noun_shot) / self.cfg.temperature
 
-
         # Reshape so the first dimension indexes by class then take the mean
         # along that dimension to generate the "prototypes" for each class
         prototypes_verb = tmp_verb_shot.reshape(self.cfg.way, self.cfg.shot, -1).mean(dim=1)
@@ -332,38 +313,6 @@ class Experiment:
         loss_verb = self.loss(clipped_y_pred_verb, verb_anno.view(-1)) + self.loss(tmp_verb_query, verb_anno_real.view(-1)[p:])
         loss_noun = self.loss(clipped_y_pred_noun, noun_anno.view(-1)) + self.loss(tmp_noun_query, noun_anno_real.view(-1)[p:])
 
-        # # Calculate predictions as in equation (1) from Matching Networks
-        # # y_hat = \sum_{i=1}^{k} a(x_hat, x_i) y_i
-        # # Create one-hot encoded label vector for the support set, the 
-        # # default PyTorch format is for labels to be integers
-        # y_onehot_verb = torch.zeros(self.cfg.way * self.cfg.shot, self.cfg.way)
-        # y_onehot_noun = torch.zeros(self.cfg.way * self.cfg.shot, self.cfg.way)
-
-        # y = torch.arange(0, self.cfg.way, 1/self.cfg.shot).long().unsqueeze(-1)
-
-        # # Unsqueeze to force y to be 2D as this
-        # # is needed for .scatter()
-        # y_onehot_verb = y_onehot_verb.scatter(1, y, 1)
-        # y_onehot_noun = y_onehot_noun.scatter(1, y, 1)
-
-        # if self.use_cuda:
-        #     y_onehot_verb = y_onehot_verb.cuda().double()
-        #     y_onehot_noun = y_onehot_noun.cuda().double()
-        #     verb_anno = verb_anno.cuda()
-        #     noun_anno = noun_anno.cuda()
-
-        # y_pred_verb = torch.mm(output_verb, y_onehot_verb.float())
-        # y_pred_noun = torch.mm(output_noun, y_onehot_noun.float())
-
-        # # Calculated loss with negative log likelihood
-        # # Clip predictions for numerical stability
-        # clipped_y_pred_verb = y_pred_verb.clamp(1e-8, 1 - 1e-8)
-        # clipped_y_pred_noun = y_pred_noun.clamp(1e-8, 1 - 1e-8)
-
-        # # Loss Evaluation
-        # loss_verb = self.loss(clipped_y_pred_verb.log(), verb_anno.view(-1))
-        # loss_noun = self.loss(clipped_y_pred_noun.log(), noun_anno.view(-1))
-
         # Transformation of loss for equal weightage
         loss = 0.5 * (loss_verb + loss_noun)
 
@@ -395,21 +344,20 @@ class Experiment:
         epoch = 1
         random.seed(self.cfg.manualSeed)
 
-        if not self.debugging:
-            # Load Model Checkpoint
-            if self.load_model:
-                checkpoint = torch.load(self.cfg.checkpoint_filename_final)
-                self.model.load_state_dict(checkpoint["model_state_dict"])
-                self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-                epoch = checkpoint["epoch"] + 1
-                # best_val_loss = checkpoint["loss"]
-                iter_num = checkpoint["iter_num"]
-                self.summary_filename = checkpoint["summary_filename"]
-                self.writer = SummaryWriter(
-                    log_dir="runs/" + self.summary_filename,
-                    flush_secs=30,
-                    filename_suffix=self.summary_filename,
-                )
+        # Load Model Checkpoint
+        if self.load_model:
+            checkpoint = torch.load(self.cfg.checkpoint_filename_final)
+            self.model.load_state_dict(checkpoint["model_state_dict"])
+            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            epoch = checkpoint["epoch"] + 1
+            # best_val_loss = checkpoint["loss"]
+            iter_num = checkpoint["iter_num"]
+            self.summary_filename = checkpoint["summary_filename"]
+            self.writer = SummaryWriter(
+                log_dir="runs/" + self.summary_filename,
+                flush_secs=30,
+                filename_suffix=self.summary_filename,
+            )
 
         self.optimizer.zero_grad()
 
@@ -455,13 +403,6 @@ class Experiment:
 
                     self.optimizer.step()
 
-                    if not self.debugging:
-                        # ...log the running loss
-                        self.writer.add_scalar(
-                            "Loss-Train/stepwise", loss.item(), iter_num
-                        )
-                        iter_num = iter_num + 1
-
                     # For faster debugging
                     if self.debugging:
                         if idx == 20:
@@ -488,12 +429,6 @@ class Experiment:
 
                     self.optimizer.step()
 
-                    if not self.debugging:
-                        # ...log the running loss
-                        self.writer.add_scalar(
-                            "Loss-Train/stepwise", loss.item(), iter_num
-                        )
-                        iter_num = iter_num + 1
 
                     # For faster debugging
                     if self.debugging:
@@ -532,13 +467,6 @@ class Experiment:
                     clip_grad_norm(self.model.parameters(), 20)
 
                     self.optimizer.step()
-
-                    if not self.debugging:
-                        # ...log the running loss
-                        self.writer.add_scalar(
-                            "Loss-Train/stepwise", loss, iter_num
-                        )
-                        iter_num = iter_num + 1
 
                     # For faster debugging
                     if self.debugging:
@@ -611,41 +539,11 @@ class Experiment:
 
                     batch_idx += 1
 
-
-                    if not self.debugging:
-                        # ...log the running loss
-                        self.writer.add_scalar(
-                            "Loss-Train/error", errors / data_sizes[env_idx], iter_num
-                        )
-                        self.writer.add_scalar(
-                            "Loss-Train/penalty", penalties / data_sizes[env_idx], iter_num
-                        )
-                        self.writer.add_scalar(
-                            "Loss-Train/weight_norm",
-                            weight_norms / data_sizes[env_idx],
-                            iter_num,
-                        )
-                        self.writer.add_scalar(
-                            "Loss-Train/total",
-                            (errors + penalties + weight_norms) / data_sizes[env_idx],
-                            iter_num,
-                        )
-                        iter_num = iter_num + 1
-
                     # For faster debugging
                     if self.debugging:
                         if batch_idx == 20:
                             break
 
-            if not self.debugging:
-                # Write to the tensorboard
-                self.writer.add_scalar("Loss-Train/epochwise", np.mean(losses), epoch)
-                print(
-                    "Epoch "
-                    + str(epoch)
-                    + ", train-seen loss = "
-                    + str(np.mean(losses))
-                )
 
             if self.data_val is not None:
                 if epoch % 10 == 0 or epoch == 22:
@@ -735,24 +633,6 @@ class Experiment:
                         total_loss = 0.5 * (np.mean(losses_verb) + np.mean(losses_noun))
 
                         if not self.debugging:
-                            # Send metrics to the tensorboard
-                            self.writer.add_scalar(
-                                "Loss-Val/verb", np.mean(losses_verb), epoch
-                            )
-                            self.writer.add_scalar(
-                                "Loss-Val/noun", np.mean(losses_noun), epoch
-                            )
-                            self.writer.add_scalar(
-                                "Accuracy/Verb(Top 1)", correct_verb / counter, epoch
-                            )
-                            self.writer.add_scalar(
-                                "Accuracy/Noun(Top 1)", correct_noun / counter, epoch
-                            )
-                            self.writer.add_scalar(
-                                "Accuracy/Action(Top 1)",
-                                correct_action / counter,
-                                epoch,
-                            )
 
                             # Save Model (Criteria: check every 10 epochs if the total val loss is less than the best recorded until now)
                             if epoch % 10 == 0:
@@ -827,90 +707,3 @@ class Experiment:
     
     def extract_features(self, sample_batch):
         return self._model_feature(sample_batch)
-
-
-if __name__ == "__main__":
-    cfg = config(debugging=True)
-
-    use_cuda = False
-
-    # Preprocessing (transformation) instantiation for training groupwise
-    transformation_train = torchvision.transforms.Compose(
-        [
-            transforms.GroupScale(256),  # scale images
-            transforms.GroupCenterCrop(224),  # center crop images
-            transforms.Stack(),  # concatenation of images
-            transforms.ToTorchFormatTensor(),  # to torch
-            transforms.GroupNormalize(
-                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-            ),  # Normalization
-        ]
-    )
-
-    # Loading training Dataset with N segment for TSN
-    EPICdata_train = EPIC(
-        mode=cfg.train_mode, cfg=cfg, transforms=transformation_train,
-    )
-
-    # Creating validation dataloader
-    dataloader_train = DataLoader(
-        EPICdata_train,
-        batch_size=cfg.train_batch_size,
-        shuffle=True,
-        num_workers=cfg.num_worker_train,
-        pin_memory=True,
-    )
-
-    dataloader_val = None
-    if cfg.val_mode:
-        # Preprocessing (transformation) instantiation for validation groupwise
-        transformation_val = torchvision.transforms.Compose(
-            [
-                transforms.GroupOverSample(
-                    224, 256
-                ),  # group sampling from images using multiple crops
-                transforms.Stack(),  # concatenation of images
-                transforms.ToTorchFormatTensor(),  # to torch
-                transforms.GroupNormalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),  # Normalization
-            ]
-        )
-
-        # Loading validation Dataset with N segment for TSN
-        EPICdata_val = EPIC(mode=cfg.val_mode, cfg=cfg, transforms=transformation_val,)
-
-        # Creating validation dataloader
-        dataloader_val = DataLoader(
-            EPICdata_val,
-            batch_size=cfg.val_batch_size,
-            shuffle=False,
-            num_workers=cfg.num_worker_val,
-            pin_memory=True,
-        )
-
-    model = EPICModel(config=cfg)
-
-    policies = model.get_optim_policies()
-
-    optimizer = torch.optim.SGD(
-        policies, lr=cfg.lr, momentum=cfg.momentum, weight_decay=cfg.weight_decay
-    )
-
-    # Loss function (CrossEntropy)
-    criterion = torch.nn.CrossEntropyLoss()
-
-    # Loading Trainer
-    experiment = Experiment(
-        cfg=cfg,
-        model=model,
-        loss=criterion,
-        optimizer=optimizer,
-        use_cuda=use_cuda,
-        data_train=dataloader_train,
-        data_val=dataloader_val,
-        debugging=True,
-    )
-
-    # Train the model
-    experiment.train()

@@ -25,7 +25,7 @@ def main(argv):
     (opts, args) = parser.parse_args(argv)
 
     # Reading config
-    cfg = config(opts.config, debugging=False, additionalText="training_MTGA_unseen_resnet18")
+    cfg = config(opts.config, debugging=False, additionalText="training_ERM_seen_resnet18")
 
     # Use CUDA
     # os.environ['CUDA_VISIBLE_DEVICES'] = 1
@@ -293,9 +293,6 @@ def main(argv):
                     out = np.append(np.mean(output, 0), verb_ann)
                     out = np.append(out, noun_ann)
                     data = np.concatenate((data, np.expand_dims(out, 0)), 0)
-                    # print(np.shape(data))
-                    # print(data)
-                    # break
                 np.save(mode, data)
 
 

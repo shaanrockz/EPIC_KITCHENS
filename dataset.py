@@ -56,43 +56,4 @@ class EPIC(Dataset):
                 ).type(torch.LongTensor),
             }
 
-import torchvision
-import transforms
-from config import config
-from torch.utils.data import DataLoader
-if __name__ == "__main__":
 
-    # Reading config
-    cfg = config()
-
-    # Preprocessing (transformation) instantiation for training groupwise
-    transformation = torchvision.transforms.Compose(
-        [
-            transforms.GroupScale(256),  # scale images
-            transforms.GroupCenterCrop(224),  # center crop images
-            transforms.Stack(),  # concatenation of images
-            transforms.ToTorchFormatTensor(),  # to torch
-            transforms.GroupNormalize(
-                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-            ),  # Normalization
-        ]
-    )
-
-    EPICdata = EPIC(
-        mode=cfg.train_mode,
-        cfg=cfg,
-        transforms=transformation,
-    )
-
-    # Creating validation dataloader
-    # batch size = 16, num_workers = 8 are best fit for 12 Gb GPU and >= 16 Gb RAM
-    dataloader = DataLoader(
-        EPICdata, batch_size=cfg.train_batch_size, shuffle=True, num_workers=cfg.num_worker_train, pin_memory=True
-    )
-
-    for idx, sample_batch in enumerate(dataloader):
-        images = sample_batch['data']
-        print(images.shape)
-        images = images.view(-1, 3, 224, 224)
-        print(images.shape)
-        print("In debugging mode")
