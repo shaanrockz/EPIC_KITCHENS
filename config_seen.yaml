@@ -1,0 +1,25 @@
+train:
+  manualSeed: 786 # set manual seed
+  epoch: 80 # Number of epochs
+  anno_path: /media/data/salam/epic-kitchens/annotations/EPIC_train_action_labels.csv # Annotation Path
+  data_path: /media/data/salam/epic-kitchens/EPIC_KITCHENS_2018/frames_rgb_flow/rgb/train/ # Data Path
+  val_seen_vids: [
+                "P01_18",
+                "P02_09",
+                "P03_27",
+                "P04_04",
+                "P07_07",
+                "P08_20",
+                "P15_01",
+                "P22_08",
+                "P24_03",
+                "P25_01",
+                "P26_05",
+                "P28_02",
+                "P30_04",
+                "P31_04",
+            ]
+  n_segments: 8
+  train_mode: train-seen
+  val_mode: val-seen 
+  algo: ERM
